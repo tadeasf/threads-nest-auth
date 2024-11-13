@@ -8,6 +8,7 @@ WORKDIR /app
 
 # Set production environment
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--experimental-specifier-resolution=node"
 
 # Build stage
 FROM base as build
@@ -15,8 +16,9 @@ FROM base as build
 # Copy package files
 COPY package.json bun.lockb ./
 
-# Install dependencies
+# Install dependencies including chalk v5
 RUN bun install
+RUN bun add chalk@latest
 
 # Copy application code
 COPY . .
