@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ThreadsService } from './threads.service';
 import { ThreadsController } from './threads.controller';
 import { GraphQLClient } from './graphql.client';
 import { ConfigModule } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
 import {
   ThreadsAuth,
   ThreadsAuthSchema,
@@ -17,8 +17,8 @@ import {
   imports: [
     ConfigModule,
     MongooseModule.forFeature([
-      { name: 'ThreadsAuth', schema: ThreadsAuthSchema },
-      { name: 'ThreadsInsights', schema: ThreadsInsightsSchema },
+      { name: ThreadsAuth.name, schema: ThreadsAuthSchema },
+      { name: ThreadsInsights.name, schema: ThreadsInsightsSchema },
     ]),
   ],
   providers: [ThreadsService, GraphQLClient],
