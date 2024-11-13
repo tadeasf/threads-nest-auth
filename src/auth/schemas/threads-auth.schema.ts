@@ -15,7 +15,6 @@ export class ThreadsAuth extends Document {
   @Prop({ default: true })
   isActive: boolean;
 
-  // User Profile Data
   @Prop()
   username: string;
 
@@ -28,7 +27,6 @@ export class ThreadsAuth extends Document {
   @Prop()
   userProfileUrl: string;
 
-  // Metrics (optional)
   @Prop({ type: Object })
   metrics: {
     views: number;

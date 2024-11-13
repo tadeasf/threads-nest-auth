@@ -1,5 +1,4 @@
 import { Schema, Document } from 'mongoose';
-import { Int32 } from 'mongoose-int32';
 import mongooseAutopopulate from 'mongoose-autopopulate';
 
 export interface Thread extends Document {
@@ -12,7 +11,7 @@ export interface Thread extends Document {
 export const ThreadSchema = new Schema<Thread>(
   {
     content: { type: String, required: true },
-    likes: { type: Int32, default: 0 },
+    likes: { type: Number, default: 0 },
     created_at: { type: Date, default: Date.now },
   },
   {
