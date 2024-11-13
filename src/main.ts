@@ -15,6 +15,7 @@ async function bootstrap() {
     .addBearerAuth()
     .addTag('auth', 'Authentication endpoints')
     .addTag('threads', 'Threads-specific operations')
+    .addTag('insights', 'Thread analytics and insights')
     .build();
 
   const document = SwaggerModule.createDocument(app, {
@@ -45,6 +46,54 @@ async function bootstrap() {
             session_id: {
               type: 'string',
             },
+          },
+        },
+        ThreadsPostsResponse: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            text: { type: 'string' },
+            media_type: {
+              type: 'string',
+              enum: ['TEXT', 'IMAGE', 'VIDEO', 'CAROUSEL'],
+            },
+            permalink: { type: 'string' },
+            timestamp: { type: 'string' },
+            reply_audience: {
+              type: 'string',
+              enum: ['EVERYONE', 'FOLLOWING', 'MENTIONED'],
+            },
+          },
+        },
+        ThreadsRepliesResponse: {
+          type: 'object',
+          properties: {
+            text: { type: 'string' },
+            media_type: { type: 'string' },
+            media_url: { type: 'string' },
+            permalink: { type: 'string' },
+            timestamp: { type: 'string' },
+            username: { type: 'string' },
+            hide_status: { type: 'boolean' },
+            alt_text: { type: 'string' },
+          },
+        },
+        ThreadsInsightsResponse: {
+          type: 'object',
+          properties: {
+            metrics: {
+              type: 'object',
+              properties: {
+                views: { type: 'number' },
+                likes: { type: 'number' },
+                replies: { type: 'number' },
+                quotes: { type: 'number' },
+                reposts: { type: 'number' },
+                followersCount: { type: 'number' },
+              },
+            },
+            since: { type: 'string', format: 'date-time' },
+            until: { type: 'string', format: 'date-time' },
           },
         },
       },
@@ -168,6 +217,59 @@ async function bootstrap() {
           },
           description: 'Complete authentication flow example',
         },
+        GetUserPostsResponse: {
+          value: {
+            data: [
+              {
+                id: '18050322910881011',
+                text: 'Check out this cool feature!',
+                media_type: 'TEXT',
+                permalink: 'https://threads.net/p/123',
+                timestamp: '2024-01-13T12:00:00Z',
+                reply_audience: 'EVERYONE',
+              },
+            ],
+            paging: {
+              next: 'cursor_next',
+              previous: 'cursor_prev',
+            },
+          },
+          description: 'List of user posts with pagination',
+        },
+        GetPostRepliesResponse: {
+          value: {
+            data: [
+              {
+                text: 'Great post!',
+                media_type: 'TEXT',
+                permalink: 'https://threads.net/p/reply123',
+                timestamp: '2024-01-13T12:05:00Z',
+                username: 'user123',
+                hide_status: false,
+              },
+            ],
+            paging: {
+              next: 'cursor_next',
+              previous: 'cursor_prev',
+            },
+          },
+          description: 'List of replies to a thread',
+        },
+        GetUserInsightsResponse: {
+          value: {
+            metrics: {
+              views: 1000,
+              likes: 500,
+              replies: 50,
+              quotes: 20,
+              reposts: 30,
+              followersCount: 5000,
+            },
+            since: '2024-01-01T00:00:00Z',
+            until: '2024-01-13T23:59:59Z',
+          },
+          description: 'User insights and metrics',
+        },
       },
     },
   });
@@ -204,9 +306,10 @@ async function bootstrap() {
   console.log(`${chalk.bold('📡 Available Routes:')}`);
   console.log(chalk.cyan('POST  /auth/token/exchange'));
   console.log(chalk.cyan('GET   /auth/token'));
-  console.log(chalk.cyan('POST  /threads/login'));
-  console.log(chalk.cyan('POST  /threads/posts'));
-  console.log(chalk.cyan('GET   /threads/profile/:username'));
+  console.log(chalk.cyan('GET   /threads/:userId/posts'));
+  console.log(chalk.cyan('GET   /threads/:userId/posts/:threadId/replies'));
+  console.log(chalk.cyan('GET   /threads/:userId/insights'));
+  console.log(chalk.cyan('GET   /health'));
 
   // Documentation URLs
   console.log(`\n${chalk.bold('📚 API Documentation:')}`);
