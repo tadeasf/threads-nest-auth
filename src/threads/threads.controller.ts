@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { ThreadsService } from './threads.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
@@ -33,5 +41,34 @@ export class ThreadsController {
     },
   ) {
     return this.threadsService.createPost(userId, createPostDto);
+  }
+
+  @Get(':userId/posts')
+  @ApiOperation({ summary: 'Get user posts' })
+  async getUserPosts(
+    @Param('userId') userId: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.threadsService.getUserPosts(userId, limit);
+  }
+
+  @Get(':userId/posts/:threadId/replies')
+  @ApiOperation({ summary: 'Get post replies' })
+  async getPostReplies(
+    @Param('userId') userId: number,
+    @Param('threadId') threadId: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.threadsService.getPostReplies(userId, threadId, limit);
+  }
+
+  @Get(':userId/insights')
+  @ApiOperation({ summary: 'Get user insights' })
+  async getUserInsights(
+    @Param('userId') userId: number,
+    @Query('since') since?: Date,
+    @Query('until') until?: Date,
+  ) {
+    return this.threadsService.getUserInsights(userId, since, until);
   }
 }
