@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Redirect } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 
@@ -90,5 +90,45 @@ export class AuthController {
   async getToken() {
     const token = await this.authService.getLongLivedToken();
     return { token, valid: !!token };
+  }
+}
+
+@ApiTags('auth')
+@Controller('threads')
+export class ThreadsCallbackController {
+  @Get('callback')
+  @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
+  @ApiResponse({ status: 302, description: 'Redirect with token' })
+  async handleCallback(@Query('code') code: string) {
+    try {
+      // Exchange the code for a token
+      const response = await fetch(
+        'https://graph.threads.net/oauth/access_token',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: process.env.THREADS_APP_ID,
+            client_secret: process.env.THREADS_APP_SECRET,
+            code,
+            grant_type: 'authorization_code',
+            redirect_uri: process.env.THREADS_REDIRECT_CALLBACK_URL,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      // Store the token securely or return it to the client
+      return {
+        access_token: data.access_token,
+        user_id: data.user_id,
+      };
+    } catch (error) {
+      console.error('Token exchange error:', error);
+      throw error;
+    }
   }
 }
