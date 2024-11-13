@@ -4,6 +4,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { ThreadsModule } from './threads/threads.module';
 import { HealthController } from './health/health.controller';
+import { ThreadsCallbackController } from './auth/auth.controller';
 
 @Module({
   imports: [
@@ -14,6 +15,6 @@ import { HealthController } from './health/health.controller';
     AuthModule,
     ThreadsModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, ThreadsCallbackController],
 })
 export class AppModule {}
