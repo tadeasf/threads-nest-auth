@@ -1,44 +1,39 @@
-# syntax = docker/dockerfile:1
+# Build stage
+FROM oven/bun:latest as build
+WORKDIR /app
 
-# Use the official Bun image
-FROM oven/bun:latest as base
+# Set environment variables
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--experimental-specifier-resolution=node"
 
-# Set working directory
+# Copy package files first to leverage caching
+COPY package.json ./
+COPY bun.lockb ./
+
+# Install all dependencies (including dev dependencies)
+RUN bun install
+
+# Copy the rest of the application
+COPY . .
+
+# Build the application
+RUN bun run build
+
+# Production stage
+FROM oven/bun:latest
 WORKDIR /app
 
 # Set production environment
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--experimental-specifier-resolution=node"
 
-# Build stage
-FROM base as build
+# Copy only necessary files from build stage
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/bun.lockb ./bun.lockb
 
-# Copy package files
-COPY package.json bun.lockb ./
+# Install only production dependencies
+RUN bun install --production --no-save
 
-# Install dependencies including chalk v5
-RUN bun install
-RUN bun add chalk@latest
-
-# Copy application code
-COPY . .
-
-# Build application
-RUN bun run build
-
-# Production stage
-FROM base
-
-# Copy built application
-COPY --from=build /app/dist /app/dist
-COPY --from=build /app/package.json /app/package.json
-COPY --from=build /app/bun.lockb /app/bun.lockb
-
-# Install production dependencies only
-RUN bun install --production
-
-# Expose port
 EXPOSE 3000
 
-# Start the server
 CMD ["bun", "run", "start:prod"]
