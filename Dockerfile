@@ -10,8 +10,8 @@ ENV NODE_OPTIONS="--experimental-specifier-resolution=node"
 COPY package.json ./
 COPY bun.lockb ./
 
-# Install all dependencies (including dev dependencies)
-RUN bun install
+# Install all dependencies without frozen lockfile
+RUN bun install --no-frozen-lockfile
 
 # Copy the rest of the application
 COPY . .
@@ -31,8 +31,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/bun.lockb ./bun.lockb
 
-# Install only production dependencies
-RUN bun install --production --no-save
+# Install production dependencies without frozen lockfile
+RUN bun install --production --no-frozen-lockfile
 
 EXPOSE 3000
 
