@@ -5,6 +5,11 @@ import { AuthModule } from './auth/auth.module';
 import { ThreadsModule } from './threads/threads.module';
 import { HealthController } from './health/health.controller';
 import { ThreadsCallbackController } from './auth/auth.controller';
+import { MongooseModule } from '@nestjs/mongoose';
+import {
+  ThreadsAuth,
+  ThreadsAuthSchema,
+} from './auth/schemas/threads-auth.schema';
 
 @Module({
   imports: [
@@ -14,6 +19,9 @@ import { ThreadsCallbackController } from './auth/auth.controller';
     DatabaseModule,
     AuthModule,
     ThreadsModule,
+    MongooseModule.forFeature([
+      { name: ThreadsAuth.name, schema: ThreadsAuthSchema },
+    ]),
   ],
   controllers: [HealthController, ThreadsCallbackController],
 })

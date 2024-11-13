@@ -1,6 +1,17 @@
-import { Controller, Post, Body, Get, Query, Redirect } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Query,
+  Redirect,
+  Injectable,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { ThreadsAuth } from './schemas/threads-auth.schema';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -95,13 +106,18 @@ export class AuthController {
 
 @ApiTags('auth')
 @Controller('threads')
+@Injectable()
 export class ThreadsCallbackController {
+  constructor(
+    @InjectModel(ThreadsAuth.name)
+    private threadsAuthModel: Model<ThreadsAuth>,
+  ) {}
+
   @Get('callback')
   @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
-  @ApiResponse({ status: 302, description: 'Redirect with token' })
+  @ApiResponse({ status: 200, description: 'Token stored successfully' })
   async handleCallback(@Query('code') code: string) {
     try {
-      // Exchange the code for a token
       const response = await fetch(
         'https://graph.threads.net/oauth/access_token',
         {
@@ -121,10 +137,19 @@ export class ThreadsCallbackController {
 
       const data = await response.json();
 
-      // Store the token securely or return it to the client
+      // Store in MongoDB
+      const auth = new this.threadsAuthModel({
+        userId: data.user_id,
+        accessToken: data.access_token,
+        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+        isActive: true,
+      });
+
+      await auth.save();
+
       return {
-        access_token: data.access_token,
-        user_id: data.user_id,
+        message: 'Authentication successful',
+        userId: data.user_id,
       };
     } catch (error) {
       console.error('Token exchange error:', error);

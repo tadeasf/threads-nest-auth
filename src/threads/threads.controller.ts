@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
 import { ThreadsService } from './threads.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
@@ -7,23 +7,31 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 export class ThreadsController {
   constructor(private readonly threadsService: ThreadsService) {}
 
+  @Get('profile/:userId')
+  @ApiOperation({ summary: 'Get user profile data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile data retrieved successfully',
+  })
+  async getProfile(@Param('userId') userId: number) {
+    return this.threadsService.getUserProfile(userId);
+  }
+
   @Post('posts')
   @ApiOperation({ summary: 'Create a new thread post' })
   @ApiResponse({ status: 201, description: 'Post created successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createPost(
-    @Headers('authorization') auth: string,
-    @Body() { content }: { content: string },
+    @Param('userId') userId: number,
+    @Body()
+    createPostDto: {
+      text?: string;
+      mediaUrl?: string;
+      mediaType?: 'IMAGE' | 'VIDEO';
+      altText?: string;
+      linkAttachment?: string;
+      replyControl?: 'FOLLOWING' | 'MENTIONED' | 'EVERYONE';
+    },
   ) {
-    const token = auth?.replace('Bearer ', '');
-    return this.threadsService.createPost(token, content);
-  }
-
-  @Get('profile/:username')
-  @ApiOperation({ summary: 'Get user profile' })
-  @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getUserProfile(@Param('username') username: string) {
-    return this.threadsService.getUserProfile(username);
+    return this.threadsService.createPost(userId, createPostDto);
   }
 }
