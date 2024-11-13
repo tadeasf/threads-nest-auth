@@ -1,39 +1,43 @@
-# Build stage
-FROM oven/bun:latest as build
+# syntax = docker/dockerfile:1
+
+# Use the official Bun image as base
+FROM oven/bun:latest as base
+LABEL fly_launch_runtime="NestJS"
 WORKDIR /app
-
-# Set environment variables
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--experimental-specifier-resolution=node"
 
-# Copy package files first to leverage caching
-COPY package.json ./
-COPY bun.lockb ./
+# Build stage
+FROM base as build
 
-# Install all dependencies without frozen lockfile
-RUN bun install --no-frozen-lockfile
+# Install packages needed to build node modules
+RUN apt-get update -qq && \
+    apt-get install -y python-is-python3 pkg-config build-essential 
 
-# Copy the rest of the application
-COPY . .
+# Copy package files
+COPY --link package.json bun.lockb ./
 
-# Build the application
+# Install dependencies
+RUN bun install
+
+# Copy the rest of the code
+COPY --link . .
+
+# Build the app
 RUN bun run build
 
 # Production stage
-FROM oven/bun:latest
+FROM base
+
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV=production
-
-# Copy only necessary files from build stage
+# Copy built application
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/bun.lockb ./bun.lockb
 
-# Install production dependencies without frozen lockfile
-RUN bun install --production --no-frozen-lockfile
-
+# Expose the port
 EXPOSE 3000
 
+# Start the server
 CMD ["bun", "run", "start:prod"]

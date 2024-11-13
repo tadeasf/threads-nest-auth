@@ -1,7 +1,6 @@
 services:
   api:
     env_file: .env
-    container_name: server
     build:
       context: .
       dockerfile: Dockerfile
