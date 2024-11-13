@@ -32,7 +32,6 @@
     "chalk": "^5.3.0",
     "mongoose": "^8.8.1",
     "mongoose-autopopulate": "^1.1.0",
-    "mongoose-double": "^0.0.1",
     "mongoose-int32": "^0.6.0",
     "mongoose-update-versioning": "^0.4.0",
     "reflect-metadata": "^0.2.0",

@@ -2,9 +2,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 
-// Change imports to require statements since these are CommonJS modules
+// Import only the plugins we need and that are compatible
 const mongooseInt32 = require('mongoose-int32');
-const mongooseDouble = require('mongoose-double');
 const mongooseAutopopulate = require('mongoose-autopopulate');
 const mongooseUpdateVersioning = require('mongoose-update-versioning');
 
@@ -14,12 +13,8 @@ const mongooseUpdateVersioning = require('mongoose-update-versioning');
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
         connectionFactory: (connection) => {
-          // Some plugins might need to be initialized before use
-          const Double = mongooseDouble(connection);
-
-          // Apply plugins
+          // Apply plugins that are working correctly
           connection.plugin(mongooseInt32);
-          connection.plugin(Double);
           connection.plugin(mongooseAutopopulate);
           connection.plugin(mongooseUpdateVersioning);
 
