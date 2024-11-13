@@ -5,6 +5,7 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "type": "commonjs",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -27,7 +28,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/swagger": "^8.0.5",
     "@scalar/nestjs-api-reference": "^0.3.168",
-    "chalk": "^5.3.0",
+    "chalk": "4.1.2",
     "mongoose": "^8.8.1",
     "mongoose-autopopulate": "^1.1.0",
     "mongoose-double": "^0.0.1",
