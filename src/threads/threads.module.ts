@@ -17,11 +17,12 @@ import {
   imports: [
     ConfigModule,
     MongooseModule.forFeature([
-      { name: ThreadsAuth.name, schema: ThreadsAuthSchema },
-      { name: ThreadsInsights.name, schema: ThreadsInsightsSchema },
+      { name: 'ThreadsAuth', schema: ThreadsAuthSchema },
+      { name: 'ThreadsInsights', schema: ThreadsInsightsSchema },
     ]),
   ],
   providers: [ThreadsService, GraphQLClient],
   controllers: [ThreadsController],
+  exports: [ThreadsService],
 })
 export class ThreadsModule {}
