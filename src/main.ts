@@ -129,6 +129,45 @@ async function bootstrap() {
           },
           description: 'Bad request error response',
         },
+        AuthFlow: {
+          value: {
+            steps: [
+              {
+                description: '1. Redirect user to Instagram OAuth URL',
+                url: `https://api.instagram.com/oauth/authorize?client_id=${process.env.THREADS_APP_ID}&redirect_uri=${process.env.THREADS_REDIRECT_CALLBACK_URL}&scope=threads_api&response_type=code`,
+              },
+              {
+                description: '2. Exchange code for access token',
+                request: {
+                  method: 'POST',
+                  url: '/auth/token/exchange',
+                  body: {
+                    code: 'AQD8h7qtQyJ...',
+                  },
+                },
+                response: {
+                  access_token: 'IGQWRPcG...',
+                  token_type: 'Bearer',
+                  expires_in: 3600,
+                },
+              },
+              {
+                description: '3. Use token in Threads API requests',
+                request: {
+                  method: 'POST',
+                  url: '/threads/posts',
+                  headers: {
+                    Authorization: 'Bearer IGQWRPcG...',
+                  },
+                  body: {
+                    content: 'Hello from Threads API!',
+                  },
+                },
+              },
+            ],
+          },
+          description: 'Complete authentication flow example',
+        },
       },
     },
   });
