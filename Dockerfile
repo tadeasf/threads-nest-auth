@@ -44,4 +44,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE 3000
 
 # Start the server
-CMD ["bun", "run", "start:prod"]
+CMD ["bun", "dist/main.js"]
