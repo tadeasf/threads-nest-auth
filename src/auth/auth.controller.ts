@@ -6,17 +6,25 @@ import {
   Query,
   Redirect,
   Injectable,
+  Req,
+  Res,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ThreadsAuth } from './schemas/threads-auth.schema';
-
+import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from './guards/auth.guard';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('token/exchange')
   @ApiOperation({
@@ -101,6 +109,21 @@ export class AuthController {
   async getToken() {
     const token = await this.authService.getLongLivedToken();
     return { token, valid: !!token };
+  }
+
+  @Get('login')
+  @ApiOperation({ summary: 'Initiate Threads OAuth login flow' })
+  @ApiResponse({ status: 302, description: 'Redirect to Threads authorization page' })
+  async login(@Res() res: Response) {
+    const authUrl = this.authService.buildAuthorizationUrl();
+    res.redirect(authUrl);
+  }
+
+  @Get('account')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Get current user account details' })
+  async getAccount(@Req() req) {
+    return this.authService.getUserDetails(req.session.access_token);
   }
 }
 

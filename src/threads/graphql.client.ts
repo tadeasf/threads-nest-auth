@@ -12,7 +12,7 @@ export class GraphQLClient {
     this.appId = this.configService.get('THREADS_APP_ID');
   }
 
-  private async makeRequest(query: string, variables: any, token?: string) {
+  public async makeRequest(query: string, variables: any, token?: string) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-IG-App-ID': this.appId,

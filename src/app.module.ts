@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
@@ -10,6 +10,7 @@ import {
   ThreadsAuth,
   ThreadsAuthSchema,
 } from './auth/schemas/threads-auth.schema';
+import * as session from 'express-session';
 
 @Module({
   imports: [
@@ -25,4 +26,17 @@ import {
   ],
   controllers: [HealthController, ThreadsCallbackController],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(
+        session({
+          secret: process.env.SESSION_SECRET,
+          resave: false,
+          saveUninitialized: true,
+          cookie: { maxAge: 6000000 },
+        }),
+      )
+      .forRoutes('*');
+  }
+}
