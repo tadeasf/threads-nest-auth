@@ -189,12 +189,18 @@ export class ThreadsCallbackController {
   constructor(
     @InjectModel(ThreadsAuth.name)
     private threadsAuthModel: Model<ThreadsAuth>,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get('callback')
   @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
-  @ApiResponse({ status: 200, description: 'Token stored successfully' })
-  async handleCallback(@Query('code') code: string) {
+  @ApiResponse({ status: 302, description: 'Redirect after successful authentication' })
+  async handleCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Req() req,
+    @Res() res: Response
+  ) {
     try {
       const response = await fetch(
         'https://graph.threads.net/oauth/access_token',
@@ -204,18 +210,18 @@ export class ThreadsCallbackController {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: new URLSearchParams({
-            client_id: process.env.THREADS_APP_ID,
-            client_secret: process.env.THREADS_APP_SECRET,
+            client_id: this.configService.get('THREADS_APP_ID'),
+            client_secret: this.configService.get('THREADS_APP_SECRET'),
             code,
             grant_type: 'authorization_code',
-            redirect_uri: process.env.THREADS_REDIRECT_CALLBACK_URL,
+            redirect_uri: this.configService.get('THREADS_REDIRECT_CALLBACK_URL'),
           }),
         },
       );
 
       const data = await response.json();
 
-      // Use findOneAndUpdate instead of creating new document
+      // Store in MongoDB
       await this.threadsAuthModel.findOneAndUpdate(
         { userId: data.user_id },
         {
@@ -229,13 +235,16 @@ export class ThreadsCallbackController {
         { upsert: true, new: true }
       );
 
-      return {
-        message: 'Authentication successful',
-        userId: data.user_id,
-      };
+      // Set session data
+      req.session.access_token = data.access_token;
+      req.session.user_id = data.user_id;
+
+      // Redirect to the dashboard or account page
+      const redirectUrl = this.configService.get('FRONTEND_URL', '/auth/account');
+      res.redirect(redirectUrl);
     } catch (error) {
       console.error('Token exchange error:', error);
-      throw error;
+      res.redirect('/auth/error');
     }
   }
 }
