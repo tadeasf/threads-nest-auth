@@ -28,11 +28,11 @@ async function bootstrap() {
           properties: {
             username: {
               type: 'string',
-              description: 'Your Instagram username',
+              description: 'Your Threads username',
             },
             password: {
               type: 'string',
-              description: 'Your Instagram password',
+              description: 'Your Threads password',
               format: 'password',
             },
           },
@@ -101,7 +101,7 @@ async function bootstrap() {
         // Auth Examples
         TokenExchangeRequest: {
           value: {
-            code: 'your_instagram_auth_code',
+            code: 'your_threads_auth_code',
           },
           description: 'Request body for token exchange',
         },
@@ -182,8 +182,8 @@ async function bootstrap() {
           value: {
             steps: [
               {
-                description: '1. Redirect user to Instagram OAuth URL',
-                url: `https://api.instagram.com/oauth/authorize?client_id=${process.env.THREADS_APP_ID}&redirect_uri=${process.env.THREADS_REDIRECT_CALLBACK_URL}&scope=threads_api&response_type=code`,
+                description: '1. Redirect user to Threads OAuth URL',
+                url: `https://threads.net/oauth/authorize?client_id=${process.env.THREADS_APP_ID}&redirect_uri=${process.env.THREADS_REDIRECT_CALLBACK_URL}&scope=threads_api&response_type=code`,
               },
               {
                 description: '2. Exchange code for access token',

@@ -1,8 +1,6 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
-
 # Threads Bot API
+
+[![Nest Logo](https://nestjs.com/img/logo-small.svg)](http://nestjs.com/)
 
 A NestJS wrapper for the official Threads GraphQL API, built with Bun runtime. This API simplifies interaction with Threads' functionality through REST endpoints.
 
@@ -22,26 +20,34 @@ bun run start:dev
 ## Core Features
 
 - ✨ Create and manage Threads posts
-- 🔑 Handle Instagram OAuth authentication
+- 🔑 Handle Threads OAuth authentication
 - 👤 Fetch user profiles and interactions
 - 🔄 Manage user sessions
 
 ## Authentication Flow
 
-1. **Get Instagram OAuth Code**
+- **Get Threads OAuth Code**
+
 ```bash
-https://api.instagram.com/oauth/authorize
-?client_id=YOUR_APP_ID
-&redirect_uri=YOUR_CALLBACK_URL
-&scope=threads_api
-&response_type=code
+https://threads.net/oauth/authorize
+  ?client_id=<THREADS_APP_ID>
+  &redirect_uri=<REDIRECT_URI>
+  &scope=<SCOPE>
+  &response_type=code
+  &state=<STATE> // Optional
+
 ```
 
-2. **Exchange Code for Token**
+```javascript
+window.open(url, '_system');`
+```
+
+- **Exchange Code for Token**
+
 ```bash
 curl -X POST http://localhost:3000/auth/token/exchange \
 -H "Content-Type: application/json" \
--d '{"code": "your_instagram_auth_code"}'
+-d '{"code": "your_threads_auth_code"}'
 ```
 
 ## API Endpoints
@@ -73,13 +79,13 @@ GET /threads/profile/:username/followers
 ### Authentication
 
 ```bash
-# Exchange Instagram code for token
+# Exchange Threads code for token
 POST /auth/token/exchange
 
 # Get token info
 GET /auth/token
 
-# Login with Instagram credentials
+# Login with Threads credentials
 POST /threads/login
 ```
 
@@ -110,4 +116,3 @@ MONGODB_URI=mongodb://127.0.0.1:27017/threads_bot
 ## License
 
 GPL-3.0
-

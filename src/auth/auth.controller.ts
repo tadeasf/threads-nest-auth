@@ -9,6 +9,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
@@ -30,13 +31,13 @@ export class AuthController {
 
   @Post('token/exchange')
   @ApiOperation({
-    summary: 'Exchange Instagram auth code for access token',
+    summary: 'Exchange Threads auth code for access token',
     description: `
-      Exchange your Instagram OAuth code for a Threads access token.
-      You need to first authenticate with Instagram and get the code from the redirect URL.
+      Exchange your Threads OAuth code for a Threads access token.
+      You need to first authenticate with Threads and get the code from the redirect URL.
       
       Example OAuth URL:
-      https://api.instagram.com/oauth/authorize
+      https://threads.net/oauth/authorize
         ?client_id=${process.env.THREADS_APP_ID}
         &redirect_uri=${process.env.THREADS_REDIRECT_CALLBACK_URL}
         &scope=threads_api
@@ -49,7 +50,7 @@ export class AuthController {
       properties: {
         code: {
           type: 'string',
-          description: 'Instagram OAuth code from redirect URL',
+          description: 'OAuth code from redirect URL',
           example: 'AQD8h7qtQyJ...',
         },
       },
@@ -116,9 +117,19 @@ export class AuthController {
   @Get('login')
   @ApiOperation({ summary: 'Initiate Threads OAuth login flow' })
   @ApiResponse({ status: 302, description: 'Redirect to Threads authorization page' })
-  async login(@Res() res: Response) {
-    const authUrl = this.authService.buildAuthorizationUrl();
-    res.redirect(authUrl);
+  async login(@Res() res: Response, @Req() req) {
+    // Generate a random state parameter for security
+    const state = Math.random().toString(36).substring(7);
+    req.session.oauthState = state;
+
+    const authUrl = new URL('https://threads.net/oauth/authorize');
+    authUrl.searchParams.append('client_id', this.configService.get('THREADS_APP_ID'));
+    authUrl.searchParams.append('redirect_uri', this.configService.get('THREADS_REDIRECT_CALLBACK_URL'));
+    authUrl.searchParams.append('scope', 'threads_api');
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('state', state);
+
+    res.redirect(authUrl.toString());
   }
 
   @Get('account')
@@ -132,10 +143,16 @@ export class AuthController {
   @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
   @ApiResponse({ status: 200, description: 'Token stored successfully' })
   async handleCallback(
-    @Query('code') code: string, 
+    @Query('code') code: string,
+    @Query('state') state: string,
     @Req() req,
     @Res() res: Response
   ) {
+    // Verify state parameter to prevent CSRF attacks
+    if (state !== req.session.oauthState) {
+      throw new UnauthorizedException('Invalid state parameter');
+    }
+
     try {
       const tokenData = await this.authService.exchangeAuthorizationCode(code);
 
