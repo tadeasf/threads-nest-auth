@@ -60,4 +60,33 @@ export class AuthService {
     
     return userDetails;
   }
+
+  async exchangeAuthorizationCode(code: string) {
+    const response = await fetch(
+      'https://graph.threads.net/oauth/access_token',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: this.configService.get('THREADS_APP_ID'),
+          client_secret: this.configService.get('THREADS_APP_SECRET'),
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: this.configService.get('THREADS_REDIRECT_URI'),
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Token exchange failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      access_token: data.access_token,
+      user_id: data.user_id,
+    };
+  }
 }

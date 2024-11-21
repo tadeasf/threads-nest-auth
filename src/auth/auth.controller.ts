@@ -24,6 +24,8 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    @InjectModel(ThreadsAuth.name)
+    private threadsAuthModel: Model<ThreadsAuth>,
   ) {}
 
   @Post('token/exchange')
@@ -124,6 +126,38 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user account details' })
   async getAccount(@Req() req) {
     return this.authService.getUserDetails(req.session.access_token);
+  }
+
+  @Get('callback')
+  @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
+  @ApiResponse({ status: 200, description: 'Token stored successfully' })
+  async handleCallback(
+    @Query('code') code: string, 
+    @Req() req,
+    @Res() res: Response
+  ) {
+    try {
+      const tokenData = await this.authService.exchangeAuthorizationCode(code);
+
+      // Store in MongoDB
+      const auth = new this.threadsAuthModel({
+        userId: tokenData.user_id,
+        accessToken: tokenData.access_token,
+        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+        isActive: true,
+      });
+
+      await auth.save();
+
+      // Set session
+      req.session.access_token = tokenData.access_token;
+      req.session.user_id = tokenData.user_id;
+
+      res.redirect('/auth/account');
+    } catch (error) {
+      console.error('Token exchange error:', error);
+      throw error;
+    }
   }
 }
 
