@@ -141,14 +141,13 @@ export class AuthController {
 
   @Get('callback')
   @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
-  @ApiResponse({ status: 200, description: 'Token stored successfully' })
+  @ApiResponse({ status: 302, description: 'Redirect after successful authentication' })
   async handleCallback(
     @Query('code') code: string,
     @Query('state') state: string,
     @Req() req,
     @Res() res: Response
   ) {
-    // Verify state parameter to prevent CSRF attacks
     if (state !== req.session.oauthState) {
       throw new UnauthorizedException('Invalid state parameter');
     }
@@ -156,28 +155,48 @@ export class AuthController {
     try {
       const tokenData = await this.authService.exchangeAuthorizationCode(code);
 
-      // Use findOneAndUpdate instead of creating new document
       await this.threadsAuthModel.findOneAndUpdate(
         { userId: tokenData.user_id },
         {
           $set: {
             userId: tokenData.user_id,
             accessToken: tokenData.access_token,
-            expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+            expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
             isActive: true,
           }
         },
         { upsert: true, new: true }
       );
 
-      // Set session
       req.session.access_token = tokenData.access_token;
       req.session.user_id = tokenData.user_id;
 
-      res.redirect('/auth/account');
+      // Get the origin from headers
+      const origin = req.get('origin') || req.get('referer');
+
+      if (!origin) {
+        throw new Error('Frontend callback URL not found in request headers');
+      }
+
+      // Construct the redirect URL with success parameters
+      const redirectUrl = new URL('/auth/callback', origin);
+      redirectUrl.searchParams.append('success', 'true');
+      redirectUrl.searchParams.append('userId', tokenData.user_id.toString());
+      
+      res.redirect(redirectUrl.toString());
     } catch (error) {
       console.error('Token exchange error:', error);
-      throw error;
+      
+      const origin = req.get('origin') || req.get('referer');
+      if (!origin) {
+        throw new Error('Frontend callback URL not found in request headers');
+      }
+
+      const errorUrl = new URL('/auth/callback', origin);
+      errorUrl.searchParams.append('success', 'false');
+      errorUrl.searchParams.append('error', error.message);
+
+      res.redirect(errorUrl.toString());
     }
   }
 }
