@@ -156,15 +156,19 @@ export class AuthController {
     try {
       const tokenData = await this.authService.exchangeAuthorizationCode(code);
 
-      // Store in MongoDB
-      const auth = new this.threadsAuthModel({
-        userId: tokenData.user_id,
-        accessToken: tokenData.access_token,
-        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
-        isActive: true,
-      });
-
-      await auth.save();
+      // Use findOneAndUpdate instead of creating new document
+      await this.threadsAuthModel.findOneAndUpdate(
+        { userId: tokenData.user_id },
+        {
+          $set: {
+            userId: tokenData.user_id,
+            accessToken: tokenData.access_token,
+            expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+            isActive: true,
+          }
+        },
+        { upsert: true, new: true }
+      );
 
       // Set session
       req.session.access_token = tokenData.access_token;
@@ -211,15 +215,19 @@ export class ThreadsCallbackController {
 
       const data = await response.json();
 
-      // Store in MongoDB
-      const auth = new this.threadsAuthModel({
-        userId: data.user_id,
-        accessToken: data.access_token,
-        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
-        isActive: true,
-      });
-
-      await auth.save();
+      // Use findOneAndUpdate instead of creating new document
+      await this.threadsAuthModel.findOneAndUpdate(
+        { userId: data.user_id },
+        {
+          $set: {
+            userId: data.user_id,
+            accessToken: data.access_token,
+            expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            isActive: true,
+          }
+        },
+        { upsert: true, new: true }
+      );
 
       return {
         message: 'Authentication successful',
