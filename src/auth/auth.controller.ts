@@ -23,7 +23,7 @@ import { AuthGuard } from './guards/auth.guard';
 import { HttpService } from '@nestjs/axios';
 
 @ApiTags('auth')
-@Controller()
+@Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -62,7 +62,7 @@ export class AuthController {
     }
   }
 
-  @Get('threads/callback')
+  @Get('callback')
   @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
   @ApiResponse({ status: 302, description: 'Redirect after successful authentication' })
   async handleCallback(

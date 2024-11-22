@@ -32,7 +32,7 @@ export class AuthService {
     const params = new URLSearchParams({
       scope: ['threads_basic', 'threads_content_publish'].join(','),
       client_id: this.configService.get('THREADS_APP_ID'),
-      redirect_uri: this.configService.get('THREADS_REDIRECT_URI'),
+      redirect_uri: `${this.configService.get('API_URL')}/auth/callback`,
       response_type: 'code',
     });
 
