@@ -62,31 +62,39 @@ export class AuthService {
   }
 
   async exchangeAuthorizationCode(code: string) {
-    const response = await fetch(
-      'https://graph.threads.net/oauth/access_token',
-      {
+    const tokenEndpoint = 'https://graph.instagram.com/oauth/access_token';
+    
+    const formData = new URLSearchParams({
+      client_id: this.configService.get('THREADS_APP_ID'),
+      client_secret: this.configService.get('THREADS_APP_SECRET'),
+      code: code,
+      grant_type: 'authorization_code',
+      redirect_uri: this.configService.get('REDIRECT_URI')
+    });
+
+    try {
+      const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({
-          client_id: this.configService.get('THREADS_APP_ID'),
-          client_secret: this.configService.get('THREADS_APP_SECRET'),
-          code,
-          grant_type: 'authorization_code',
-          redirect_uri: this.configService.get('THREADS_REDIRECT_URI'),
-        }),
-      },
-    );
+        body: formData.toString()
+      });
 
-    if (!response.ok) {
-      throw new Error(`Token exchange failed: ${response.statusText}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Token exchange error details:', errorData);
+        throw new Error(`Token exchange failed: ${response.statusText} - ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      return {
+        access_token: data.access_token,
+        user_id: data.user_id,
+      };
+    } catch (error) {
+      console.error('Token exchange error:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    return {
-      access_token: data.access_token,
-      user_id: data.user_id,
-    };
   }
 }
