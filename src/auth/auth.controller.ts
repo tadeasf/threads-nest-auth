@@ -92,11 +92,17 @@ export class AuthController {
       req.session.access_token = data.access_token;
       req.session.user_id = data.user_id;
 
-      // Redirect to the frontend account page
-      res.redirect(`${this.configService.get('FRONTEND_URL')}/auth/account`);
+      // Fix: Use absolute URL for redirect
+      const frontendUrl = this.configService.get('FRONTEND_URL');
+      if (!frontendUrl) {
+        throw new Error('FRONTEND_URL environment variable is not set');
+      }
+      
+      res.redirect(`${frontendUrl}/auth/account`);
     } catch (error) {
       console.error('Token exchange error:', error);
-      res.redirect(`${this.configService.get('FRONTEND_URL')}/auth/error`);
+      const frontendUrl = this.configService.get('FRONTEND_URL');
+      res.redirect(`${frontendUrl}/auth/error`);
     }
   }
 }
