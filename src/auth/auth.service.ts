@@ -82,9 +82,9 @@ export class AuthService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Token exchange error details:', errorData);
-        throw new Error(`Token exchange failed: ${response.statusText} - ${JSON.stringify(errorData)}`);
+        const errorText = await response.text();
+        console.error('Token exchange error response:', errorText);
+        throw new Error(`Token exchange failed: ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();

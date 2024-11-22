@@ -73,36 +73,24 @@ export class AuthController {
   ) {
     try {
       const data = await this.authService.exchangeAuthorizationCode(code);
-
-      // Store in MongoDB
-      await this.threadsAuthModel.findOneAndUpdate(
-        { userId: data.user_id },
-        {
-          $set: {
-            userId: data.user_id,
-            accessToken: data.access_token,
-            expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-            isActive: true,
-          }
-        },
-        { upsert: true, new: true }
-      );
-
-      // Set session data
+      
+      // Store in session
       req.session.access_token = data.access_token;
       req.session.user_id = data.user_id;
-
-      // Fix: Use absolute URL for redirect
+      
       const frontendUrl = this.configService.get('FRONTEND_URL');
       if (!frontendUrl) {
-        throw new Error('FRONTEND_URL environment variable is not set');
+        throw new Error('FRONTEND_URL not configured');
       }
       
-      res.redirect(`${frontendUrl}/auth/account`);
+      return res.redirect(`${frontendUrl}/auth/account`);
     } catch (error) {
-      console.error('Token exchange error:', error);
+      console.error('Auth callback error:', error);
       const frontendUrl = this.configService.get('FRONTEND_URL');
-      res.redirect(`${frontendUrl}/auth/error`);
+      if (!frontendUrl) {
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+      return res.redirect(`${frontendUrl}/auth/error`);
     }
   }
 }
