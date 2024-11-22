@@ -67,41 +67,31 @@ export class AuthService {
     const formData = new URLSearchParams();
     formData.append('client_id', this.configService.get('THREADS_APP_ID'));
     formData.append('client_secret', this.configService.get('THREADS_APP_SECRET'));
-    formData.append('code', code);
     formData.append('grant_type', 'authorization_code');
-    formData.append('redirect_uri', this.configService.get('REDIRECT_URI'));
+    formData.append('code', code);
+    formData.append('redirect_uri', 'https://threads-nest-auth-production.up.railway.app/auth/callback');
 
     try {
-      console.log('Token exchange request:', {
-        endpoint: tokenEndpoint,
-        clientId: this.configService.get('THREADS_APP_ID'),
-        redirectUri: this.configService.get('REDIRECT_URI'),
-        code: code.substring(0, 10) + '...' // Log partial code for security
-      });
-
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
         },
         body: formData.toString()
       });
 
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Token exchange error details:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers),
-          body: errorText
-        });
-        throw new Error(`Token exchange failed: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Token exchange failed: ${response.status} - ${responseText}`);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       return {
         access_token: data.access_token,
-        user_id: data.user_id,
+        user_id: data.user_id
       };
     } catch (error) {
       console.error('Token exchange error:', error);
