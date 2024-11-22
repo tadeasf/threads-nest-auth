@@ -62,17 +62,23 @@ export class AuthService {
   }
 
   async exchangeAuthorizationCode(code: string) {
-    const tokenEndpoint = 'https://graph.instagram.com/oauth/access_token';
+    const tokenEndpoint = 'https://api.instagram.com/oauth/access_token';
     
-    const formData = new URLSearchParams({
-      client_id: this.configService.get('THREADS_APP_ID'),
-      client_secret: this.configService.get('THREADS_APP_SECRET'),
-      code: code,
-      grant_type: 'authorization_code',
-      redirect_uri: this.configService.get('REDIRECT_URI')
-    });
+    const formData = new URLSearchParams();
+    formData.append('client_id', this.configService.get('THREADS_APP_ID'));
+    formData.append('client_secret', this.configService.get('THREADS_APP_SECRET'));
+    formData.append('code', code);
+    formData.append('grant_type', 'authorization_code');
+    formData.append('redirect_uri', this.configService.get('REDIRECT_URI'));
 
     try {
+      console.log('Token exchange request:', {
+        endpoint: tokenEndpoint,
+        clientId: this.configService.get('THREADS_APP_ID'),
+        redirectUri: this.configService.get('REDIRECT_URI'),
+        code: code.substring(0, 10) + '...' // Log partial code for security
+      });
+
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
@@ -83,8 +89,13 @@ export class AuthService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Token exchange error response:', errorText);
-        throw new Error(`Token exchange failed: ${response.statusText} - ${errorText}`);
+        console.error('Token exchange error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers),
+          body: errorText
+        });
+        throw new Error(`Token exchange failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
