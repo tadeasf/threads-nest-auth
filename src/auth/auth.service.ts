@@ -1,68 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GraphQLClient } from '../threads/graphql.client';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private configService: ConfigService,
-    private graphqlClient: GraphQLClient,
-  ) {}
+  private readonly GRAPH_API_VERSION = 'v1';
+  private readonly AUTHORIZATION_BASE_URL = 'https://www.threads.net';
+  private readonly GRAPH_API_BASE_URL = 'https://graph.threads.net';
 
-  private shortLivedToken: string | null = null;
-  private longLivedToken: string | null = null;
-
-  async exchangeShortLivedToken(token: string): Promise<string> {
-    // Store short-lived token
-    this.shortLivedToken = token;
-
-    // TODO: Implement Meta Graph API token exchange
-    // https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived
-
-    // For now, returning a mock response
-    this.longLivedToken = 'mock_long_lived_token';
-    return this.longLivedToken;
-  }
-
-  async getLongLivedToken(): Promise<string | null> {
-    return this.longLivedToken;
-  }
-
-  buildAuthorizationUrl(): string {
-    const params = new URLSearchParams({
-      scope: ['threads_basic', 'threads_content_publish'].join(','),
-      client_id: this.configService.get('THREADS_APP_ID'),
-      redirect_uri: `${this.configService.get('API_URL')}/auth/callback`,
-      response_type: 'code',
-    });
-
-    return `https://www.threads.net/oauth/authorize?${params.toString()}`;
-  }
-
-  async getUserDetails(accessToken: string) {
-    const fields = ['username', 'threads_profile_picture_url', 'threads_biography'].join(',');
-    const query = `
-      query UserProfile {
-        me {
-          ${fields}
-        }
-      }
-    `;
-
-    const response = await this.graphqlClient.makeRequest(
-      query,
-      {}, // variables
-      accessToken
-    );
-
-    const userDetails = response.data.me;
-    userDetails.user_profile_url = `https://www.threads.net/@${userDetails.username}`;
-    
-    return userDetails;
-  }
+  constructor(private configService: ConfigService) {}
 
   async exchangeAuthorizationCode(code: string) {
-    const tokenEndpoint = 'https://www.threads.net/oauth/access_token';
+    const tokenEndpoint = `${this.AUTHORIZATION_BASE_URL}/oauth/access_token`;
     
     const formData = new URLSearchParams();
     formData.append('client_id', this.configService.get('THREADS_APP_ID'));
@@ -84,7 +32,7 @@ export class AuthService {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Accept': 'application/json'
         },
-        body: formData.toString()
+        body: formData
       });
 
       const responseText = await response.text();
@@ -103,5 +51,16 @@ export class AuthService {
       console.error('Token exchange error:', error);
       throw error;
     }
+  }
+
+  buildGraphAPIURL(endpoint: string, params: Record<string, any>, accessToken: string) {
+    const url = new URL(`${this.GRAPH_API_BASE_URL}/${this.GRAPH_API_VERSION}/${endpoint}`);
+    url.searchParams.append('access_token', accessToken);
+    
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.append(key, value);
+    }
+    
+    return url.toString();
   }
 }
