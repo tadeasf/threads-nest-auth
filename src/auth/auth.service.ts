@@ -62,16 +62,22 @@ export class AuthService {
   }
 
   async exchangeAuthorizationCode(code: string) {
-    const tokenEndpoint = 'https://api.instagram.com/oauth/access_token';
+    const tokenEndpoint = 'https://www.threads.net/oauth/access_token';
     
     const formData = new URLSearchParams();
     formData.append('client_id', this.configService.get('THREADS_APP_ID'));
     formData.append('client_secret', this.configService.get('THREADS_APP_SECRET'));
     formData.append('grant_type', 'authorization_code');
     formData.append('code', code);
-    formData.append('redirect_uri', 'https://threads-nest-auth-production.up.railway.app/auth/callback');
+    formData.append('redirect_uri', this.configService.get('REDIRECT_URI'));
 
     try {
+      console.log('Token exchange request:', {
+        endpoint: tokenEndpoint,
+        clientId: this.configService.get('THREADS_APP_ID'),
+        redirectUri: this.configService.get('REDIRECT_URI')
+      });
+
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
