@@ -4,7 +4,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { ThreadsModule } from './threads/threads.module';
 import { HealthController } from './health/health.controller';
-import { ThreadsCallbackController } from './auth/auth.controller';
+import { AuthController } from './auth/auth.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   ThreadsAuth,
@@ -24,7 +24,7 @@ import * as session from 'express-session';
       { name: ThreadsAuth.name, schema: ThreadsAuthSchema },
     ]),
   ],
-  controllers: [HealthController, ThreadsCallbackController],
+  controllers: [HealthController, AuthController],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
@@ -33,8 +33,13 @@ export class AppModule {
         session({
           secret: process.env.SESSION_SECRET,
           resave: false,
-          saveUninitialized: true,
-          cookie: { maxAge: 6000000 },
+          saveUninitialized: false,
+          cookie: { 
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+          },
         }),
       )
       .forRoutes('*');
