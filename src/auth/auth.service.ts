@@ -3,64 +3,75 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-  private readonly GRAPH_API_VERSION = 'v1';
-  private readonly AUTHORIZATION_BASE_URL = 'https://www.threads.net';
   private readonly GRAPH_API_BASE_URL = 'https://graph.threads.net';
+  private readonly AUTHORIZATION_BASE_URL = 'https://www.threads.net';
+  private readonly GRAPH_API_VERSION: string;
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) {
+    this.GRAPH_API_VERSION = this.configService.get('GRAPH_API_VERSION');
+  }
 
   async exchangeAuthorizationCode(code: string) {
     const tokenEndpoint = `${this.AUTHORIZATION_BASE_URL}/oauth/access_token`;
     
-    const formData = new URLSearchParams();
-    formData.append('client_id', this.configService.get('THREADS_APP_ID'));
-    formData.append('client_secret', this.configService.get('THREADS_APP_SECRET'));
-    formData.append('grant_type', 'authorization_code');
-    formData.append('code', code);
-    formData.append('redirect_uri', this.configService.get('REDIRECT_URI'));
+    const formData = new URLSearchParams({
+      client_id: this.configService.get('THREADS_APP_ID'),
+      client_secret: this.configService.get('THREADS_APP_SECRET'),
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: this.configService.get('REDIRECT_URI')
+    });
 
     try {
-      console.log('Token exchange request:', {
-        endpoint: tokenEndpoint,
-        clientId: this.configService.get('THREADS_APP_ID'),
-        redirectUri: this.configService.get('REDIRECT_URI')
-      });
-
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
         },
         body: formData
       });
 
-      const responseText = await response.text();
-      console.log('Raw response:', responseText);
-
       if (!response.ok) {
-        throw new Error(`Token exchange failed: ${response.status} - ${responseText}`);
+        const errorText = await response.text();
+        console.error('Token exchange error:', {
+          status: response.status,
+          body: errorText
+        });
+        throw new Error(`Token exchange failed: ${response.status}`);
       }
 
-      const data = JSON.parse(responseText);
+      const data = await response.json();
+      
+      // Get long-lived token
+      const longLivedToken = await this.getLongLivedToken(data.access_token);
+      
       return {
-        access_token: data.access_token,
+        access_token: longLivedToken,
         user_id: data.user_id
       };
     } catch (error) {
-      console.error('Token exchange error:', error);
+      console.error('Auth error:', error);
       throw error;
     }
   }
 
-  buildGraphAPIURL(endpoint: string, params: Record<string, any>, accessToken: string) {
-    const url = new URL(`${this.GRAPH_API_BASE_URL}/${this.GRAPH_API_VERSION}/${endpoint}`);
-    url.searchParams.append('access_token', accessToken);
-    
-    for (const [key, value] of Object.entries(params)) {
+  private async getLongLivedToken(shortLivedToken: string) {
+    const url = this.buildGraphAPIURL('oauth/access_token', {
+      grant_type: 'ig_exchange_token',
+      client_secret: this.configService.get('THREADS_APP_SECRET'),
+      access_token: shortLivedToken
+    });
+
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.access_token;
+  }
+
+  private buildGraphAPIURL(path: string, params: Record<string, string>) {
+    const url = new URL(`${this.GRAPH_API_BASE_URL}/${this.GRAPH_API_VERSION}/${path}`);
+    Object.entries(params).forEach(([key, value]) => {
       url.searchParams.append(key, value);
-    }
-    
+    });
     return url.toString();
   }
 }
