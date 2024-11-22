@@ -93,4 +93,20 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/auth/error`);
     }
   }
+
+  @Get('logout')
+  @ApiOperation({ summary: 'Logout and destroy session' })
+  @ApiResponse({ status: 200, description: 'Logout successful' })
+  async logout(@Session() session: any, @Res() res: Response) {
+    if (session) {
+      session.destroy((err) => {
+        if (err) {
+          return res.redirect(`${this.configService.get('FRONTEND_URL')}/auth/error`);
+        }
+        res.redirect(this.configService.get('FRONTEND_URL'));
+      });
+    } else {
+      res.redirect(this.configService.get('FRONTEND_URL'));
+    }
+  }
 }

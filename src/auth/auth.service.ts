@@ -3,27 +3,43 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-  private readonly GRAPH_API_BASE_URL = 'https://graph.threads.net';
+  private readonly GRAPH_API_BASE_URL: string;
   private readonly AUTHORIZATION_BASE_URL = 'https://www.threads.net';
-  private readonly GRAPH_API_VERSION: string;
+  private readonly SCOPES = [
+    'threads_basic',
+    'threads_content_publish',
+    'threads_manage_insights',
+    'threads_manage_replies',
+    'threads_read_replies'
+  ];
 
   constructor(private configService: ConfigService) {
-    this.GRAPH_API_VERSION = this.configService.get('GRAPH_API_VERSION');
+    const version = this.configService.get('GRAPH_API_VERSION');
+    this.GRAPH_API_BASE_URL = `https://graph.threads.net/${version}/`;
+  }
+
+  buildAuthorizationUrl() {
+    return this.buildGraphAPIURL('oauth/authorize', {
+      scope: this.SCOPES.join(','),
+      client_id: this.configService.get('THREADS_APP_ID'),
+      redirect_uri: this.configService.get('REDIRECT_URI'),
+      response_type: 'code',
+    }, null, this.AUTHORIZATION_BASE_URL);
   }
 
   async exchangeAuthorizationCode(code: string) {
-    const tokenEndpoint = `${this.AUTHORIZATION_BASE_URL}/oauth/access_token`;
-    
-    const formData = new URLSearchParams({
-      client_id: this.configService.get('THREADS_APP_ID'),
-      client_secret: this.configService.get('THREADS_APP_SECRET'),
-      grant_type: 'authorization_code',
-      code: code,
-      redirect_uri: this.configService.get('REDIRECT_URI')
-    });
+    const tokenUrl = this.buildGraphAPIURL('oauth/access_token', {}, null, this.GRAPH_API_BASE_URL);
 
     try {
-      const response = await fetch(tokenEndpoint, {
+      const formData = new URLSearchParams({
+        client_id: this.configService.get('THREADS_APP_ID'),
+        client_secret: this.configService.get('THREADS_APP_SECRET'),
+        grant_type: 'authorization_code',
+        redirect_uri: this.configService.get('REDIRECT_URI'),
+        code: code,
+      });
+
+      const response = await fetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -33,45 +49,26 @@ export class AuthService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Token exchange error:', {
-          status: response.status,
-          body: errorText
-        });
-        throw new Error(`Token exchange failed: ${response.status}`);
+        throw new Error(`Token exchange failed: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      
-      // Get long-lived token
-      const longLivedToken = await this.getLongLivedToken(data.access_token);
-      
       return {
-        access_token: longLivedToken,
+        access_token: data.access_token,
         user_id: data.user_id
       };
     } catch (error) {
-      console.error('Auth error:', error);
+      console.error('Token exchange error:', error);
       throw error;
     }
   }
 
-  private async getLongLivedToken(shortLivedToken: string) {
-    const url = this.buildGraphAPIURL('oauth/access_token', {
-      grant_type: 'ig_exchange_token',
-      client_secret: this.configService.get('THREADS_APP_SECRET'),
-      access_token: shortLivedToken
-    });
-
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.access_token;
-  }
-
-  private buildGraphAPIURL(path: string, params: Record<string, string>) {
-    const url = new URL(`${this.GRAPH_API_BASE_URL}/${this.GRAPH_API_VERSION}/${path}`);
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
+  private buildGraphAPIURL(path: string, params: Record<string, string>, accessToken?: string, baseUrl?: string) {
+    const url = new URL(path, baseUrl ?? this.GRAPH_API_BASE_URL);
+    url.search = new URLSearchParams(params).toString();
+    if (accessToken) {
+      url.searchParams.append('access_token', accessToken);
+    }
     return url.toString();
   }
 }
