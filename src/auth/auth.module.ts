@@ -6,10 +6,12 @@ import { AuthGuard } from './guards/auth.guard';
 import { GraphQLClient } from '../threads/graphql.client';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThreadsAuth, ThreadsAuthSchema } from './schemas/threads-auth.schema';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
     ConfigModule,
+    HttpModule,
     MongooseModule.forFeature([
       { name: ThreadsAuth.name, schema: ThreadsAuthSchema },
     ]),

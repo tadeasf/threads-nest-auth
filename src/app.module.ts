@@ -6,6 +6,7 @@ import { ThreadsModule } from './threads/threads.module';
 import { HealthController } from './health/health.controller';
 import { AuthController } from './auth/auth.controller';
 import { MongooseModule } from '@nestjs/mongoose';
+import { HttpModule } from '@nestjs/axios';
 import {
   ThreadsAuth,
   ThreadsAuthSchema,
@@ -17,6 +18,7 @@ import * as session from 'express-session';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    HttpModule,
     DatabaseModule,
     AuthModule,
     ThreadsModule,
@@ -37,7 +39,7 @@ export class AppModule {
           cookie: { 
             secure: process.env.NODE_ENV === 'production',
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            maxAge: 24 * 60 * 60 * 1000,
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
           },
         }),
