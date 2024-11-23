@@ -3,9 +3,10 @@ import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import chalk from 'chalk';
-import fs from 'fs';
 import path from 'path';
 import https from 'https';
+import { readFileSync } from 'fs';
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -309,8 +310,8 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV === 'production') {
     const httpsOptions = {
-      key: fs.readFileSync(path.join(__dirname, '../threads-sample.meta-key.pem')),
-      cert: fs.readFileSync(path.join(__dirname, '../threads-sample.meta.pem')),
+      key: readFileSync(path.join(__dirname, '../threads-sample.meta-key.pem')),
+      cert: readFileSync(path.join(__dirname, '../threads-sample.meta-cert.pem'))
     };
     
     const server = https.createServer(httpsOptions, app.getHttpAdapter().getInstance());
