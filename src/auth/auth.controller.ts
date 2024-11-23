@@ -83,7 +83,7 @@ export class AuthController {
         throw new Error('FRONTEND_URL not configured');
       }
       
-      return res.redirect(`${frontendUrl}/auth/account`);
+      return res.redirect(`${frontendUrl}/api/account`);
     } catch (error) {
       console.error('Auth callback error:', error);
       const frontendUrl = this.configService.get('FRONTEND_URL');
