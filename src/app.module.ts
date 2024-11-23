@@ -12,12 +12,12 @@ import {
   ThreadsAuthSchema,
 } from './auth/schemas/threads-auth.schema';
 import * as session from 'express-session';
+import { createClient } from '@redis/client';
+import * as connectRedis from 'connect-redis';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot(),
     HttpModule,
     DatabaseModule,
     AuthModule,
@@ -27,6 +27,19 @@ import * as session from 'express-session';
     ]),
   ],
   controllers: [HealthController, AuthController],
+  providers: [
+    {
+      provide: 'SESSION_STORE',
+      useFactory: async () => {
+        const RedisStore = connectRedis(session);
+        const redisClient = createClient({
+          url: process.env.REDIS_URL,
+        });
+        await redisClient.connect();
+        return new RedisStore({ client: redisClient });
+      },
+    },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

@@ -301,32 +301,14 @@ async function bootstrap() {
     }),
   );
 
-  const port = parseInt(process.env.PORT ?? '3000', 10);
-  const host = process.env.HOST ?? '0.0.0.0';
+  // Use Railway's PORT environment variable
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  
+  // Bind to 0.0.0.0 instead of localhost for container environments
+  await app.listen(port, '0.0.0.0');
 
-  await app.listen(port, host);
-
-  // Get server URL
+  // Get server URL for logging
   const serverUrl = await app.getUrl();
-
-  console.log('\n' + chalk.yellow('━'.repeat(50)));
-  console.log(`\n${chalk.bold('🚀 Server Successfully Started!')}\n`);
-
-  // Available Routes
-  console.log(`${chalk.bold('📡 Available Routes:')}`);
-  console.log(chalk.cyan('POST  /auth/token/exchange'));
-  console.log(chalk.cyan('GET   /auth/token'));
-  console.log(chalk.cyan('GET   /threads/:userId/posts'));
-  console.log(chalk.cyan('GET   /threads/:userId/posts/:threadId/replies'));
-  console.log(chalk.cyan('GET   /threads/:userId/insights'));
-  console.log(chalk.cyan('GET   /health'));
-
-  // Documentation URLs
-  console.log(`\n${chalk.bold('📚 API Documentation:')}`);
-  console.log(chalk.green(`✨ Scalar Docs:  ${serverUrl}/docs`));
-  console.log(chalk.green(`📘 Swagger UI:   ${serverUrl}/api`));
-  console.log(chalk.green(`🔧 OpenAPI JSON: ${serverUrl}/openapi.json`));
-
-  console.log('\n' + chalk.yellow('━'.repeat(50)) + '\n');
+  console.log(`\n${chalk.bold('🚀 Application is running on:')} ${chalk.green(serverUrl)}`);
 }
 bootstrap();
