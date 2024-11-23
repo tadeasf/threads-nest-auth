@@ -3,10 +3,6 @@ import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import chalk from 'chalk';
-import path from 'path';
-import https from 'https';
-import { readFileSync } from 'fs';
-
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -306,19 +302,9 @@ async function bootstrap() {
   );
 
   const port = parseInt(process.env.PORT ?? '3000', 10);
-  const host = process.env.HOST ?? 'localhost';
+  const host = process.env.HOST ?? '0.0.0.0';
 
-  if (process.env.NODE_ENV === 'production') {
-    const httpsOptions = {
-      key: readFileSync(path.join(__dirname, '../threads-sample.meta-key.pem')),
-      cert: readFileSync(path.join(__dirname, '../threads-sample.meta-cert.pem'))
-    };
-    
-    const server = https.createServer(httpsOptions, app.getHttpAdapter().getInstance());
-    await new Promise<void>((resolve) => server.listen(port, host, () => resolve()));
-  } else {
-    await app.listen(port, host);
-  }
+  await app.listen(port, host);
 
   // Get server URL
   const serverUrl = await app.getUrl();
