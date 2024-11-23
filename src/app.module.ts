@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer } from '@nestjs/common';
+import { Module, MiddlewareConsumer, Inject } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
@@ -13,7 +13,7 @@ import {
 } from './auth/schemas/threads-auth.schema';
 import * as session from 'express-session';
 import { createClient } from '@redis/client';
-import * as connectRedis from 'connect-redis';
+import RedisStore from 'connect-redis';
 
 @Module({
   imports: [
@@ -31,12 +31,14 @@ import * as connectRedis from 'connect-redis';
     {
       provide: 'SESSION_STORE',
       useFactory: async () => {
-        const RedisStore = connectRedis(session);
         const redisClient = createClient({
           url: process.env.REDIS_URL,
         });
         await redisClient.connect();
-        return new RedisStore({ client: redisClient });
+        return new RedisStore({
+          client: redisClient,
+          prefix: 'threads-session:',
+        });
       },
     },
   ],
@@ -46,6 +48,7 @@ export class AppModule {
     consumer
       .apply(
         session({
+          store: this.sessionStore,
           secret: process.env.SESSION_SECRET,
           resave: false,
           saveUninitialized: false,
@@ -59,4 +62,9 @@ export class AppModule {
       )
       .forRoutes('*');
   }
+
+  constructor(
+    @Inject('SESSION_STORE')
+    private readonly sessionStore: RedisStore
+  ) {}
 }
