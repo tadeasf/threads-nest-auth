@@ -60,39 +60,28 @@ export class AuthController {
     }
   }
 
-  @Post('callback')
+  @Get('callback')
   async handleCallback(
-    @Body() body: { code: string; state: string },
-    @Session() session: Record<string, any>,
+    @Query('code') code: string,
+    @Query('error') error: string,
+    @Session() session: any,
     @Res() res: Response
   ) {
+    if (error) {
+      return res.redirect(`${this.configService.get('FRONTEND_URL')}/?error=auth_failed`);
+    }
+
     try {
-      const authResult = await this.authService.handleCallback(body.code);
+      const authData = await this.authService.handleCallback(code);
       
       // Set session data
-      session.user_id = authResult.userId;
-      session.authenticated = true;
+      session.user_id = authData.userId;
+      session.access_token = authData.accessToken;
       
-      // Store auth data in MongoDB
-      await this.threadsAuthModel.findOneAndUpdate(
-        { userId: authResult.userId },
-        {
-          userId: authResult.userId,
-          username: authResult.user.username,
-          profilePicture: authResult.user.profilePicture,
-          accessToken: authResult.accessToken,
-          tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
-        },
-        { upsert: true }
-      );
-
-      return res.json({
-        success: true,
-        user: authResult.user
-      });
+      return res.redirect(`${this.configService.get('FRONTEND_URL')}/?success=auth`);
     } catch (error) {
-      console.error('Auth callback error:', error);
-      throw new UnauthorizedException('Authentication failed');
+      console.error('Callback error:', error);
+      return res.redirect(`${this.configService.get('FRONTEND_URL')}/?error=auth_failed`);
     }
   }
 
