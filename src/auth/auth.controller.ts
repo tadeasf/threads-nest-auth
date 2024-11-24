@@ -113,8 +113,9 @@ export class AuthController {
   @Get('login')
   @ApiOperation({ summary: 'Get Threads authorization URL' })
   async getAuthorizationUrl() {
-    return {
-      url: this.authService.buildAuthorizationUrl()
-    };
+    console.log("Login endpoint hit");
+    const url = this.authService.buildAuthorizationUrl();
+    console.log("Generated URL:", url);
+    return { url };
   }
 }
