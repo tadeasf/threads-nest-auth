@@ -4,38 +4,19 @@ import { Document } from 'mongoose';
 @Schema({ timestamps: true })
 export class ThreadsAuth extends Document {
   @Prop({ required: true, unique: true })
-  userId: number;
+  userId: string;
+
+  @Prop({ required: true })
+  username: string;
+
+  @Prop()
+  profilePicture: string;
 
   @Prop({ required: true })
   accessToken: string;
 
-  @Prop()
-  expiresAt: Date;
-
-  @Prop({ default: true })
-  isActive: boolean;
-
-  @Prop()
-  username: string;
-
-  @Prop()
-  threadsProfilePictureUrl: string;
-
-  @Prop()
-  threadsBiography: string;
-
-  @Prop()
-  userProfileUrl: string;
-
-  @Prop({ type: Object })
-  metrics: {
-    views: number;
-    likes: number;
-    replies: number;
-    quotes: number;
-    reposts: number;
-    followersCount: number;
-  };
+  @Prop({ required: true, default: Date.now })
+  lastUpdated: Date;
 }
 
 export const ThreadsAuthSchema = SchemaFactory.createForClass(ThreadsAuth);

@@ -36,25 +36,23 @@ export class AuthController {
   @Get('auth/account')
   @UseGuards(AuthGuard)
   async getAccount(@Session() session: any) {
-    if (!session.access_token || !session.user_id) {
+    if (!session.user_id) {
       throw new UnauthorizedException();
     }
 
     try {
-      const response = await this.httpService.get(
-        'https://graph.threads.net/v1/me',
-        {
-          params: {
-            fields: 'id,username,threads_profile_picture_url',
-            access_token: session.access_token
-          }
-        }
-      ).toPromise();
+      const userAuth = await this.threadsAuthModel.findOne({ 
+        userId: session.user_id 
+      });
+
+      if (!userAuth) {
+        throw new UnauthorizedException();
+      }
 
       return {
-        userId: session.user_id,
-        username: response.data.username,
-        profilePicture: response.data.threads_profile_picture_url
+        userId: userAuth.userId,
+        username: userAuth.username,
+        profilePicture: userAuth.profilePicture
       };
     } catch (error) {
       console.error('Account fetch error:', error);
