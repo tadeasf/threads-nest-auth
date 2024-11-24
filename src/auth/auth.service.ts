@@ -19,12 +19,15 @@ export class AuthService {
   }
 
   buildAuthorizationUrl() {
-    return this.buildGraphAPIURL('oauth/authorize', {
-      scope: this.SCOPES.join(','),
+    const params = new URLSearchParams({
       client_id: this.configService.get('THREADS_APP_ID'),
-      redirect_uri: this.configService.get('REDIRECT_URI'),
+      redirect_uri: `${this.configService.get('API_URL')}/auth/callback`,
       response_type: 'code',
-    }, null, this.AUTHORIZATION_BASE_URL);
+      scope: this.SCOPES.join(','),
+      state: Date.now().toString()
+    });
+
+    return `${this.AUTHORIZATION_BASE_URL}/oauth/authorize?${params.toString()}`;
   }
 
   async exchangeAuthorizationCode(code: string) {

@@ -109,4 +109,12 @@ export class AuthController {
       res.redirect(this.configService.get('FRONTEND_URL'));
     }
   }
+
+  @Get('login')
+  @ApiOperation({ summary: 'Get Threads authorization URL' })
+  async getAuthorizationUrl() {
+    return {
+      url: this.authService.buildAuthorizationUrl()
+    };
+  }
 }
