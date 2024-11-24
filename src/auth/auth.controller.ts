@@ -113,9 +113,14 @@ export class AuthController {
   @Get('login')
   @ApiOperation({ summary: 'Get Threads authorization URL' })
   async getAuthorizationUrl() {
-    console.log("Login endpoint hit");
-    const url = this.authService.buildAuthorizationUrl();
-    console.log("Generated URL:", url);
-    return { url };
+    console.log("NestJS: Login endpoint hit");
+    try {
+      const url = this.authService.buildAuthorizationUrl();
+      console.log("NestJS: Generated URL:", url);
+      return { url };
+    } catch (error) {
+      console.error("NestJS: Error generating URL:", error);
+      throw error;
+    }
   }
 }
