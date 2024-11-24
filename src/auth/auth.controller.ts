@@ -62,23 +62,33 @@ export class AuthController {
     }
   }
 
+  @Get('callback')
   @Post('callback')
   @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
   @ApiResponse({ status: 302, description: 'Redirect after successful authentication' })
   async handleCallback(
-    @Body() body: { code: string; state: string },
+    @Query('code') queryCode: string,
+    @Query('state') queryState: string,
+    @Body() body: { code?: string; state?: string },
     @Res() res: Response,
     @Session() session: any
   ) {
     try {
-      const data = await this.authService.handleCallback(body.code, body.state);
+      const code = queryCode || body.code;
+      const state = queryState || body.state;
+
+      if (!code || !state) {
+        throw new Error('Missing code or state');
+      }
+
+      const data = await this.authService.handleCallback(code, state);
       
       // Set session data
       session.authenticated = true;
       session.access_token = data.accessToken;
       session.user_id = data.userId;
       
-      // Set cookie and redirect
+      // Set cookie and redirect to frontend
       res.cookie('auth_token', data.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -86,10 +96,15 @@ export class AuthController {
         path: '/',
       });
 
-      return res.json(data);
+      // Redirect to frontend with success
+      return res.redirect(
+        `${this.configService.get('FRONTEND_URL')}/?auth=success`
+      );
     } catch (error) {
       console.error('Callback error:', error);
-      return res.redirect(`${this.configService.get('FRONTEND_URL')}/?error=auth_failed`);
+      return res.redirect(
+        `${this.configService.get('FRONTEND_URL')}/?error=auth_failed`
+      );
     }
   }
 
