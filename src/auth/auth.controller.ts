@@ -75,13 +75,12 @@ export class AuthController {
   ) {
     try {
       const code = queryCode || body.code;
-      const state = queryState || body.state;
 
-      if (!code || !state) {
-        throw new Error('Missing code or state');
+      if (!code) {
+        throw new Error('Missing code');
       }
 
-      const data = await this.authService.handleCallback(code, state);
+      const data = await this.authService.handleCallback(code);
       
       // Set session data
       session.authenticated = true;
@@ -98,7 +97,7 @@ export class AuthController {
 
       // Redirect to frontend with success
       return res.redirect(
-        `${this.configService.get('FRONTEND_URL')}/?auth=success`
+        `${this.configService.get('FRONTEND_URL')}/?success=auth`
       );
     } catch (error) {
       console.error('Callback error:', error);
@@ -108,19 +107,25 @@ export class AuthController {
     }
   }
 
-  @Get('logout')
+  @Post('logout')
   @ApiOperation({ summary: 'Logout and destroy session' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
   async logout(@Session() session: any, @Res() res: Response) {
-    if (session) {
-      session.destroy((err) => {
-        if (err) {
-          return res.redirect(`${this.configService.get('FRONTEND_URL')}/auth/error`);
-        }
-        res.redirect(this.configService.get('FRONTEND_URL'));
-      });
-    } else {
-      res.redirect(this.configService.get('FRONTEND_URL'));
+    try {
+      if (session) {
+        await new Promise((resolve, reject) => {
+          session.destroy((err) => {
+            if (err) reject(err);
+            else resolve(true);
+          });
+        });
+      }
+      
+      res.clearCookie('auth_token');
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw new HttpException('Logout failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

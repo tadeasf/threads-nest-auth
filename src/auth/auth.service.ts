@@ -83,41 +83,33 @@ export class AuthService {
     return url.toString();
   }
 
-  async handleCallback(code: string, state: string) {
+  async handleCallback(code: string) {
     try {
-      const { access_token, user_id } = await this.exchangeAuthorizationCode(code);
-
-      const userProfile = await this.fetchUserProfile(access_token);
-
-      const authData = await this.threadsAuthModel.findOneAndUpdate(
-        { userId: user_id },
-        {
-          userId: user_id,
-          accessToken: access_token,
-          username: userProfile.username,
-          threadsProfilePictureUrl: userProfile.profile_picture_url,
-          isActive: true,
-          expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-        },
-        { upsert: true, new: true }
-      );
-
+      // Exchange code for access token
+      const tokenData = await this.exchangeAuthorizationCode(code);
+      
+      // Get user info with fresh token
+      const userProfile = await this.fetchUserProfile(tokenData.access_token);
+      
       return {
-        userId: user_id,
-        accessToken: access_token,
-        username: userProfile.username,
-        profilePicture: userProfile.profile_picture_url
+        user: {
+          id: tokenData.user_id,
+          username: userProfile.username,
+          profilePicture: userProfile.profile_picture_url
+        },
+        accessToken: tokenData.access_token,
+        userId: tokenData.user_id
       };
     } catch (error) {
-      console.error('Handle callback error:', error);
-      throw new UnauthorizedException('Failed to authenticate with Threads');
+      console.error('Auth callback error:', error);
+      throw new UnauthorizedException('Authentication failed');
     }
   }
 
   private async fetchUserProfile(accessToken: string) {
     try {
       const response = await this.httpService.get(
-        'https://graph.threads.net/v1/me',
+        `${this.GRAPH_API_BASE_URL}me`,
         {
           params: {
             fields: 'id,username,threads_profile_picture_url',
