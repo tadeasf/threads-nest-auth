@@ -17,6 +17,9 @@ export class ThreadsAuth extends Document {
 
   @Prop({ required: true, default: Date.now })
   lastUpdated: Date;
+
+  @Prop({ required: true })
+  tokenExpiresAt: Date;
 }
 
 export const ThreadsAuthSchema = SchemaFactory.createForClass(ThreadsAuth);

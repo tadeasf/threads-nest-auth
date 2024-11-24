@@ -61,39 +61,37 @@ export class AuthController {
   }
 
   @Get('callback')
-  @Post('callback')
-  @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
-  @ApiResponse({ status: 302, description: 'Redirect after successful authentication' })
   async handleCallback(
-    @Query('code') queryCode: string,
-    @Query('state') queryState: string,
-    @Body() body: { code?: string; state?: string },
-    @Res() res: Response,
-    @Session() session: any
+    @Query('code') code: string,
+    @Query('error') error: string,
+    @Query('error_reason') errorReason: string,
+    @Query('error_description') errorDescription: string,
+    @Session() session: any,
+    @Res() res: Response
   ) {
+    if (error) {
+      console.error('OAuth error:', { error, errorReason, errorDescription });
+      return res.redirect(
+        `${this.configService.get('FRONTEND_URL')}/?error=auth_failed&reason=${errorReason}`
+      );
+    }
+
     try {
-      const code = queryCode || body.code;
-
-      if (!code) {
-        throw new Error('Missing code');
-      }
-
-      const data = await this.authService.handleCallback(code);
+      console.log('Received code:', code);
+      const authData = await this.authService.handleCallback(code);
       
       // Set session data
-      session.authenticated = true;
-      session.access_token = data.accessToken;
-      session.user_id = data.userId;
+      session.user_id = authData.userId;
+      session.access_token = authData.accessToken;
       
-      // Set cookie and redirect to frontend
-      res.cookie('auth_token', data.accessToken, {
+      // Set secure cookie
+      res.cookie('auth_token', authData.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',
+        maxAge: 60 * 24 * 60 * 60 * 1000 // 60 days
       });
 
-      // Redirect to frontend with success
       return res.redirect(
         `${this.configService.get('FRONTEND_URL')}/?success=auth`
       );
