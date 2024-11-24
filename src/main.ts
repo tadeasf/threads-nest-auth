@@ -5,37 +5,32 @@ import { apiReference } from '@scalar/nestjs-api-reference';
 import chalk from 'chalk';
 import * as session from 'express-session';
 import * as cookieParser from 'cookie-parser';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
-  // Enable CORS
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'https://your-production-frontend-url.com'
-    ],
+    origin: configService.get('FRONTEND_URL'),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   });
 
-  // Use cookie parser
   app.use(cookieParser());
-
-  // Use session middleware
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || 'your-secret',
+      secret: configService.get('SESSION_SECRET'),
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: 'lax',
-      },
-    }),
+        maxAge: 60 * 24 * 60 * 60 * 1000, // 60 days
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      }
+    })
   );
 
   // OpenAPI/Swagger configuration

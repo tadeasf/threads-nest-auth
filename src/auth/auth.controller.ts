@@ -60,46 +60,39 @@ export class AuthController {
     }
   }
 
-  @Get('callback')
+  @Post('callback')
   async handleCallback(
-    @Query('code') code: string,
-    @Query('error') error: string,
-    @Query('error_reason') errorReason: string,
-    @Query('error_description') errorDescription: string,
-    @Session() session: any,
+    @Body() body: { code: string; state: string },
+    @Session() session: Record<string, any>,
     @Res() res: Response
   ) {
-    if (error) {
-      console.error('OAuth error:', { error, errorReason, errorDescription });
-      return res.redirect(
-        `${this.configService.get('FRONTEND_URL')}/?error=auth_failed&reason=${errorReason}`
-      );
-    }
-
     try {
-      console.log('Received code:', code);
-      const authData = await this.authService.handleCallback(code);
+      const authResult = await this.authService.handleCallback(body.code);
       
       // Set session data
-      session.user_id = authData.userId;
-      session.access_token = authData.accessToken;
+      session.user_id = authResult.userId;
+      session.authenticated = true;
       
-      // Set secure cookie
-      res.cookie('auth_token', authData.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 24 * 60 * 60 * 1000 // 60 days
-      });
+      // Store auth data in MongoDB
+      await this.threadsAuthModel.findOneAndUpdate(
+        { userId: authResult.userId },
+        {
+          userId: authResult.userId,
+          username: authResult.user.username,
+          profilePicture: authResult.user.profilePicture,
+          accessToken: authResult.accessToken,
+          tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+        },
+        { upsert: true }
+      );
 
-      return res.redirect(
-        `${this.configService.get('FRONTEND_URL')}/?success=auth`
-      );
+      return res.json({
+        success: true,
+        user: authResult.user
+      });
     } catch (error) {
-      console.error('Callback error:', error);
-      return res.redirect(
-        `${this.configService.get('FRONTEND_URL')}/?error=auth_failed`
-      );
+      console.error('Auth callback error:', error);
+      throw new UnauthorizedException('Authentication failed');
     }
   }
 
@@ -140,10 +133,10 @@ export class AuthController {
   }
 
   @Get('me')
-  async getCurrentUser(@Session() session: any, @Req() req: Request) {
+  async getCurrentUser(@Session() session: any) {
     try {
       if (!session.user_id) {
-        throw new UnauthorizedException();
+        return { user: null };
       }
 
       const userAuth = await this.threadsAuthModel.findOne({ 
@@ -151,23 +144,7 @@ export class AuthController {
       });
 
       if (!userAuth) {
-        throw new UnauthorizedException();
-      }
-
-      // Check if token needs refresh (if older than 24 hours)
-      const tokenAge = Date.now() - userAuth.lastUpdated.getTime();
-      const oneDayInMs = 24 * 60 * 60 * 1000;
-      
-      if (tokenAge > oneDayInMs) {
-        try {
-          const newToken = await this.authService.refreshToken(userAuth.accessToken);
-          userAuth.accessToken = newToken;
-          userAuth.lastUpdated = new Date();
-          await userAuth.save();
-        } catch (error) {
-          console.error('Token refresh error:', error);
-          throw new UnauthorizedException('Token refresh failed');
-        }
+        return { user: null };
       }
 
       return {
@@ -178,7 +155,8 @@ export class AuthController {
         }
       };
     } catch (error) {
-      throw new UnauthorizedException();
+      console.error('Get current user error:', error);
+      return { user: null };
     }
   }
 }
