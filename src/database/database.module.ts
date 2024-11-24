@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // Import plugins using require since they're CommonJS modules
 const mongooseAutopopulate = require('mongoose-autopopulate');
@@ -9,8 +9,11 @@ const mongooseUpdateVersioning = require('mongoose-update-versioning');
 @Module({
   imports: [
     MongooseModule.forRootAsync({
+      imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
         connectionFactory: (connection) => {
           connection.plugin(mongooseAutopopulate);
           return connection;
