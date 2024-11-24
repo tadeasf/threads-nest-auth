@@ -1,5 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { ThreadsAuth } from './schemas/threads-auth.schema';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class AuthService {
@@ -13,7 +17,11 @@ export class AuthService {
     'threads_read_replies'
   ];
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @InjectModel(ThreadsAuth.name) private threadsAuthModel: Model<ThreadsAuth>,
+    private readonly httpService: HttpService,
+  ) {
     const version = this.configService.get('GRAPH_API_VERSION');
     this.GRAPH_API_BASE_URL = `https://graph.threads.net/${version}/`;
   }
@@ -73,5 +81,58 @@ export class AuthService {
       url.searchParams.append('access_token', accessToken);
     }
     return url.toString();
+  }
+
+  async handleCallback(code: string, state: string) {
+    try {
+      const { access_token, user_id } = await this.exchangeAuthorizationCode(code);
+
+      const userProfile = await this.fetchUserProfile(access_token);
+
+      const authData = await this.threadsAuthModel.findOneAndUpdate(
+        { userId: user_id },
+        {
+          userId: user_id,
+          accessToken: access_token,
+          username: userProfile.username,
+          threadsProfilePictureUrl: userProfile.profile_picture_url,
+          isActive: true,
+          expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        },
+        { upsert: true, new: true }
+      );
+
+      return {
+        userId: user_id,
+        accessToken: access_token,
+        username: userProfile.username,
+        profilePicture: userProfile.profile_picture_url
+      };
+    } catch (error) {
+      console.error('Handle callback error:', error);
+      throw new UnauthorizedException('Failed to authenticate with Threads');
+    }
+  }
+
+  private async fetchUserProfile(accessToken: string) {
+    try {
+      const response = await this.httpService.get(
+        'https://graph.threads.net/v1/me',
+        {
+          params: {
+            fields: 'id,username,threads_profile_picture_url',
+            access_token: accessToken
+          }
+        }
+      ).toPromise();
+
+      return {
+        username: response.data.username,
+        profile_picture_url: response.data.threads_profile_picture_url
+      };
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      throw new Error('Failed to fetch user profile');
+    }
   }
 }

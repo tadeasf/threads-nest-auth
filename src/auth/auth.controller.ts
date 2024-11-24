@@ -62,35 +62,34 @@ export class AuthController {
     }
   }
 
-  @Get('callback')
+  @Post('callback')
   @ApiOperation({ summary: 'Handle OAuth callback from Threads' })
   @ApiResponse({ status: 302, description: 'Redirect after successful authentication' })
   async handleCallback(
-    @Query('code') code: string,
-    @Query('state') state: string,
-    @Req() req,
-    @Res() res: Response
+    @Body() body: { code: string; state: string },
+    @Res() res: Response,
+    @Session() session: any
   ) {
     try {
-      const data = await this.authService.exchangeAuthorizationCode(code);
+      const data = await this.authService.handleCallback(body.code, body.state);
       
-      // Store in session
-      req.session.access_token = data.access_token;
-      req.session.user_id = data.user_id;
+      // Set session data
+      session.authenticated = true;
+      session.access_token = data.accessToken;
+      session.user_id = data.userId;
       
-      const frontendUrl = this.configService.get('FRONTEND_URL');
-      if (!frontendUrl) {
-        throw new Error('FRONTEND_URL not configured');
-      }
-      
-      return res.redirect(`${frontendUrl}/api/account`);
+      // Set cookie and redirect
+      res.cookie('auth_token', data.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+      });
+
+      return res.json(data);
     } catch (error) {
-      console.error('Auth callback error:', error);
-      const frontendUrl = this.configService.get('FRONTEND_URL');
-      if (!frontendUrl) {
-        return res.status(500).json({ error: 'Server configuration error' });
-      }
-      return res.redirect(`${frontendUrl}/auth/error`);
+      console.error('Callback error:', error);
+      return res.redirect(`${this.configService.get('FRONTEND_URL')}/?error=auth_failed`);
     }
   }
 
