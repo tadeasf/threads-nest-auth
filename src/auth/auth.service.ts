@@ -103,4 +103,23 @@ export class AuthService {
       throw new UnauthorizedException('Authentication failed');
     }
   }
+
+  async refreshToken(accessToken: string) {
+    try {
+      const response = await this.httpService.get(
+        `${this.GRAPH_API_BASE_URL}/refresh_access_token`,
+        {
+          params: {
+            grant_type: 'th_refresh_token',
+            access_token: accessToken
+          }
+        }
+      ).toPromise();
+
+      return response.data.access_token;
+    } catch (error) {
+      console.error('Token refresh error:', error.response?.data || error);
+      throw new UnauthorizedException('Token refresh failed');
+    }
+  }
 }

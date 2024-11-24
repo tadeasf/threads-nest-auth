@@ -138,4 +138,47 @@ export class AuthController {
       throw error;
     }
   }
+
+  @Get('me')
+  async getCurrentUser(@Session() session: any, @Req() req: Request) {
+    try {
+      if (!session.user_id) {
+        throw new UnauthorizedException();
+      }
+
+      const userAuth = await this.threadsAuthModel.findOne({ 
+        userId: session.user_id 
+      });
+
+      if (!userAuth) {
+        throw new UnauthorizedException();
+      }
+
+      // Check if token needs refresh (if older than 24 hours)
+      const tokenAge = Date.now() - userAuth.lastUpdated.getTime();
+      const oneDayInMs = 24 * 60 * 60 * 1000;
+      
+      if (tokenAge > oneDayInMs) {
+        try {
+          const newToken = await this.authService.refreshToken(userAuth.accessToken);
+          userAuth.accessToken = newToken;
+          userAuth.lastUpdated = new Date();
+          await userAuth.save();
+        } catch (error) {
+          console.error('Token refresh error:', error);
+          throw new UnauthorizedException('Token refresh failed');
+        }
+      }
+
+      return {
+        user: {
+          id: userAuth.userId,
+          username: userAuth.username,
+          profilePicture: userAuth.profilePicture
+        }
+      };
+    } catch (error) {
+      throw new UnauthorizedException();
+    }
+  }
 }
