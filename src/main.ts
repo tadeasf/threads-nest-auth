@@ -7,12 +7,12 @@ import chalk from 'chalk';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS
+  // Enable CORS with specific options
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // OpenAPI/Swagger configuration
@@ -302,7 +302,7 @@ async function bootstrap() {
   );
 
   // Use Railway's PORT environment variable
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const port = process.env.PORT || 3000;
   
   // Bind to 0.0.0.0 instead of localhost for container environments
   await app.listen(port, '0.0.0.0');
